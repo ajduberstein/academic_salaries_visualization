@@ -48,18 +48,35 @@
 
       body{
         line-height: 1;
-        margin: 10px;
+        margin: 2em;
+        font-family:"Helvetica Neue";
+        line-height:2em;
+      }
+
+      h1 {
+        font-style:bold;
+        font-size:32px;
+        font-family:"HelveticaNeue-Light";
+      }
+
+      #organizationToggle {
+        height:30px;
+        text-align:center;
+        width:200px;
+        background:white;
+        color:steelblue;
+        white-space:pre;
       }
 
       #tooltip {
         white-space:pre;
         position: absolute;
         width: 6em;
-        line-height: 40px;
+        line-height: 30px;
         margin: 3px;
         text-align: left;
         color:black;
-        font-family: sans-serif;
+        font-family: "Helvetica Neue";
       }
 
       #tooltip.hidden {
@@ -67,7 +84,7 @@
       }
 
       .value-id {
-        font-family: Arial;
+        font-family: "HelveticaNeue-Light";
         font-size: 72px;
       }
 
@@ -83,6 +100,10 @@
         font-size: 11px;
       }
 
+      circle:hover{
+        stroke: #36454F;
+        stroke-width: 2;
+      }
     </style>
   </head>
   <body>
@@ -93,11 +114,16 @@
     </div>
 
   <script src="d3.v3.js"></script>
+  <h1> Average Professor Real Salary by Department and Title, 1990-2009</h1>
+  <p> Mouseover to view an individual time series. Click to view only a particular category. More <a target="_blank" href="https://github.com/ajduberstein/academic_salaries_visualization/blob/master/README.md">here.</a> 
+  <div id="organizationToggle"></div>
   <script>
-      var w = 1000;
-      var h = 1000;
+      var DEFAULT_RADIUS = 3.5;
+      var w = 800;
+      var h = 650;
       var padding = 50;
-      var data = []
+      var categoryFilterIsActive = false;
+      var data = [];
       d3.csv('faculty_salaries_clean.csv', function(dset){
         data = dset.map(function(d) { 
           return [ 
@@ -157,7 +183,7 @@
             return yScale(d[1]);
          })
          .attr("r", function(d, i){
-            return 3;
+              return DEFAULT_RADIUS;
          })
         .attr("id", function(d, i){
           return d[5];
@@ -165,15 +191,16 @@
         .style("fill",function(d, i){
           return deptCatScale(d[2]);
         });
+      //Interactivity
       var circles = d3.selectAll("circle")
         .on("mouseover", function(d, i){
           d3.select(this)
           .transition()
           .duration(250)
-          .attr("r",20);
+          .style("stroke-width",10);
         //Tooltip
-          var xPosition = 1000;
-          var yPosition = 100;//parseFloat(d3.select(this).attr("cy"));
+          var xPosition = w;
+          var yPosition = h - h*3/4;//parseFloat(d3.select(this).attr("cy"));
           var fontColor = d3.select(this).style("fill");
           d3.select("#tooltip")
             .style("left", xPosition + "px")
@@ -188,15 +215,69 @@
           d3.select("#organization")
           .text(d[3] === 'MU' ? 'Miami University' : 'APLU' );
           d3.select("#professor_position")
-          .text(d[4]);
+          .text(d[4][0] === 'A' ? d[4] + " Professor" : d[4] );
           d3.select("#tooltip").classed("hidden", false);
+          d3.selectAll("circle")
+            .filter(function(e){
+              if (d[2] === e[2] && d[3] === e[3] && d[4] === e[4] && d[5] === e[5]){
+                console.log(e);
+                return e;
+              } 
+              else{
+                return null;
+              }
+            })
+            .transition()
+            .duration(250)
+            .style("stroke","#36454F")
+            .style("stroke-width",20);
         }).on("mouseout", function() {
-            d3.select(this)
+            d3.selectAll(this)
               .transition()
               .duration(500)
-              .attr("r",3)
-
+              .attr("r",DEFAULT_RADIUS);
+            d3.selectAll("circle")
+              .transition()
+              .duration(500)
+              .style("stroke",0)
+              .style("stroke-width",0);
+        }).on("click", function(sel){
+          var radiusChange = (categoryFilterIsActive) ? DEFAULT_RADIUS : 0;
+          d3.selectAll("circle")
+            .filter(function(d){
+              if (categoryFilterIsActive){
+                return d;
+              }
+              else{
+                if (d[2] === sel[2]){
+                  return null;
+                }
+                else{
+                  return d;
+                }
+              }
+            })
+            .transition()
+            .duration(1000)
+            .attr("r",radiusChange);
+          categoryFilterIsActive = !categoryFilterIsActive;
         });
+        //Legend
+        var legend = svg.selectAll(".legend")
+        .data(deptCatScale.domain())
+        .enter().append("g")
+        .attr("class", "legend")
+        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+        legend.append("text")
+        .attr("x", w - w*.9)
+        .attr("y", 80)
+        .attr("dy", ".35em")
+        .attr("fill",function(d){ return deptCatScale(d); })
+        .attr("font-family",'"HelveticaNeue-Light"')
+        .style("text-anchor", "start")
+        .text(function(d) { return d; })
+        ;
 
       });
        </script>
